@@ -105,12 +105,10 @@
 
               echo "Dispatching: $action – $key → $ami"
 
-              gh api repos/${{ github.repository }}/dispatches \
-                --field event_type="ami-pair-changed" \
-                --raw-field client_payload="$(jq -n --arg a "$action" \
-                                             --arg k "$key" --arg m "$ami" \
-                                             '{action:$a, key:$k, ami:$m}')" \
-                >/dev/null
+              jq -n --arg a "$action" --arg k "$key" --arg m "$ami" \
+                '{event_type:"ami-pair-changed", client_payload:{action:$a, key:$k, ami:$m}}' >payload.json
+
+              gh api repos/${{ github.repository }}/dispatches --input payload.json >/dev/null
             }
 
             # Install gh CLI (tiny) because peter-evans/action is overkill here.
