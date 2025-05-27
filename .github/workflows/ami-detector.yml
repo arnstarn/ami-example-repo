@@ -60,7 +60,9 @@
               set -e
               echo "git show status: $status"
               if [ $status -eq 0 ]; then
+                set +o pipefail
                 git show HEAD^:ami-ledger.txt | grep -v '^#' | sort -u >previous.list
+                set -o pipefail
                 echo "created previous.list from previous commit"
               else
                 touch previous.list
