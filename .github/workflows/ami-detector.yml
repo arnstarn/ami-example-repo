@@ -52,19 +52,24 @@
           id: previous
           shell: bash
           run: |
+            set -x
             if git rev-parse HEAD^ >/dev/null 2>&1; then
               set +e
               git show HEAD^:ami-ledger.txt >/dev/null 2>&1
               status=$?
               set -e
+              echo "git show status: $status"
               if [ $status -eq 0 ]; then
                 git show HEAD^:ami-ledger.txt | grep -v '^#' | sort -u >previous.list
+                echo "created previous.list from previous commit"
               else
                 touch previous.list
+                echo "previous.list touched (file not found in previous commit)"
               fi
             else
               # Initial commit, no parent exists
               touch previous.list
+              echo "previous.list touched (no parent commit)"
             fi
             echo "Previous list:"
             cat previous.list || true
