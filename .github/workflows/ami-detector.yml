@@ -96,7 +96,7 @@
             steps.diff.outputs != ''
           shell: bash
           env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GH_TOKEN: ${{ secrets.PAT_TOKEN }}
           run: |
             dispatch() {
               local action=$1 pair=$2
@@ -135,7 +135,7 @@
 
         - name: Commit new ledger
           env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GH_TOKEN: ${{ secrets.PAT_TOKEN }}
           run: |
             git config user.name  "github-actions"
             git config user.email "github-actions@users.noreply.github.com"
