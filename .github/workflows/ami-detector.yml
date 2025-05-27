@@ -17,6 +17,9 @@
       paths: [ 'amis/**' ]          # start only if something under /amis changes
     workflow_dispatch:              # manual “Run workflow” button (optional)
 
+  permissions:
+    contents: write
+
   jobs:
   ################################################################################
   # 1. Detect changed pairs and fire one dispatch per pair
@@ -151,7 +154,7 @@
 
         - name: Commit new ledger
           env:
-            GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           run: |
             git config user.name  "github-actions"
             git config user.email "github-actions@users.noreply.github.com"
@@ -160,4 +163,4 @@
               echo "No ledger change to commit."
               exit 0
             }
-            git push
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
