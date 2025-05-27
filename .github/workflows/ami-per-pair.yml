@@ -34,6 +34,9 @@
         # YOUR REAL LOGIC GOES HERE
         # Replace the echo below with a build, deploy, etc.
         # ---------------------------------------------------------------------
+        - name: Make deploy script executable
+          run: chmod +x scripts/deploy-ami.sh
+
         - name: ✨ Run pipeline for this key/AMI pair
           run: |
             ./scripts/deploy-ami.sh \
