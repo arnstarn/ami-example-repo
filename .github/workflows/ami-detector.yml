@@ -52,9 +52,14 @@
           id: previous
           shell: bash
           run: |
-            if git show HEAD^:ami-ledger.txt >/dev/null 2>&1 || true; then
-              git show HEAD^:ami-ledger.txt | grep -v '^#' | sort -u >previous.list
+            if git rev-parse HEAD^ >/dev/null 2>&1; then
+              if git show HEAD^:ami-ledger.txt >/dev/null 2>&1; then
+                git show HEAD^:ami-ledger.txt | grep -v '^#' | sort -u >previous.list
+              else
+                touch previous.list
+              fi
             else
+              # Initial commit, no parent exists
               touch previous.list
             fi
             echo "Previous list:"
