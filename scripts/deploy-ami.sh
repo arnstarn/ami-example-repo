@@ -1,5 +1,5 @@
-    #!/usr/bin/env bash
+#!/bin/bash
 
-    set -euo pipefail
-    echo "Deploy script placeholder"
-    echo "Arguments: $@"
+set -euo pipefail
+echo "Deploy script placeholder"
+echo "Arguments: $@"
