@@ -53,26 +53,14 @@
           shell: bash
           run: |
             set -x
-            if git rev-parse HEAD^ >/dev/null 2>&1; then
-              set +e
-              git show HEAD^:ami-ledger.txt >/dev/null 2>&1
-              status=$?
-              set -e
-              echo "git show status: $status"
-              if [ $status -eq 0 ]; then
-                set +o pipefail
-                git show HEAD^:ami-ledger.txt | grep -v '^#' | sort -u >previous.list
-                set -o pipefail
-                echo "created previous.list from previous commit"
-              else
-                touch previous.list
-                echo "previous.list touched (file not found in previous commit)"
-              fi
+            set +o pipefail
+            if git show HEAD^:ami-ledger.txt 2>/dev/null | grep -v '^#' | sort -u >previous.list; then
+              echo "created previous.list from previous commit"
             else
-              # Initial commit, no parent exists
               touch previous.list
-              echo "previous.list touched (no parent commit)"
+              echo "previous.list touched (file not found or initial commit)"
             fi
+            set -o pipefail
             echo "Previous list:"
             cat previous.list || true
 
@@ -108,7 +96,7 @@
             steps.diff.outputs != ''
           shell: bash
           env:
-            GH_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           run: |
             dispatch() {
               local action=$1 pair=$2
