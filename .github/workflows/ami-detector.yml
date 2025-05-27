@@ -1,0 +1,142 @@
+# .github/workflows/ami-detector.yml
+# ───────────────────────────────────────────────────────────────────────────────
+# Runs on every push that modifies anything under /amis/.
+# • Builds the list of <key>|<ami_id> pairs for the repo *after* the push.
+# • Compares it with the list stored in ami‑ledger.txt from the previous commit.
+# • For each pair that is added, removed, or has a new AMI ID it fires a
+#   repository_dispatch event so another workflow can process just that pair.
+# • Finally, refreshes ami‑ledger.txt so future pushes are compared to the new
+#   state.
+# ------------------------------------------------------------------------------
+
+  name: AMI detector
+
+  on:
+    push:
+      branches: [ main ]
+      paths: [ 'amis/**' ]          # start only if something under /amis changes
+    workflow_dispatch:              # manual “Run workflow” button (optional)
+
+  jobs:
+  ################################################################################
+  # 1. Detect changed pairs and fire one dispatch per pair
+  ################################################################################
+    detect-and-dispatch:
+      runs-on: ubuntu-latest
+      steps:
+        - name: 🛎️  Check out commit
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0          # needed to read the previous commit
+
+        # -----------------------------------------------------------------------
+        # Build "current.list":   all <key>|<ami> pairs *after* this push
+        # -----------------------------------------------------------------------
+        - name: Build current pair list
+          id: current
+          shell: bash
+          run: |
+            find amis -name '*.json' -print0 \
+            | xargs -0 jq -r '
+                to_entries[]           # every key/value in the JSON file
+                | .key + "|" + .value  # collapse to a single line
+              ' | sort -u >current.list
+            echo "Current list:"
+            cat current.list
+
+        # -----------------------------------------------------------------------
+        # Build "previous.list": pairs from ami‑ledger.txt in the *previous* commit
+        # If the ledger didn’t exist yet, previous.list will be empty.
+        # -----------------------------------------------------------------------
+        - name: Build previous pair list
+          id: previous
+          shell: bash
+          run: |
+            if git show HEAD^:ami-ledger.txt >/dev/null 2>&1; then
+              git show HEAD^:ami-ledger.txt | grep -v '^#' | sort -u >previous.list
+            else
+              touch previous.list
+            fi
+            echo "Previous list:"
+            cat previous.list || true
+
+        # -----------------------------------------------------------------------
+        # Diff the two sorted lists with `comm`.
+        #   added   = lines only in current.list
+        #   removed = lines only in previous.list
+        # A changed AMI ID for an existing key appears as "removed + added".
+        # -----------------------------------------------------------------------
+        - name: Calculate added / removed pairs
+          id: diff
+          shell: bash
+          run: |
+            added=$(comm -13 previous.list current.list || true)
+            removed=$(comm -23 previous.list current.list || true)
+
+            echo "Added pairs:"
+            printf '%s\n' "$added"
+            echo "Removed pairs:"
+            printf '%s\n' "$removed"
+
+            # Save to temporary files so we can loop later
+            printf '%s\n' "$added"   >added.list
+            printf '%s\n' "$removed" >removed.list
+
+        # -----------------------------------------------------------------------
+        # Fire one repository_dispatch *per pair* so the second workflow runs
+        # independently for every change.
+        # -----------------------------------------------------------------------
+        - name: Dispatch per‑pair workflow runs
+          if: |
+            steps.diff.outputs != ''  # always true, but keeps `matrix` linter happy
+          shell: bash
+          env:
+            GH_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            dispatch() {
+              local action=$1 pair=$2
+              local key="${pair%%|*}"
+              local ami="${pair#*|}"
+
+              echo "Dispatching: $action – $key → $ami"
+
+              gh api repos/${{ github.repository }}/dispatches \
+                --field event_type="ami-pair-changed" \
+                --field client_payload="$(jq -n --arg a "$action" \
+                                             --arg k "$key" --arg m "$ami" \
+                                             '{action:$a, key:$k, ami:$m}')" \
+                >/dev/null
+            }
+
+            # Install gh CLI (tiny) because peter-evans/action is overkill here.
+            # GitHub removes it after the job, so this is safe for CI runners.
+            sudo apt-get -y install gh >/dev/null
+
+            while read -r pair;   do [[ -n "$pair" ]] && dispatch added   "$pair"; done <added.list
+            while read -r pair;   do [[ -n "$pair" ]] && dispatch removed "$pair"; done <removed.list
+
+        # -----------------------------------------------------------------------
+        # Update ami‑ledger.txt to match the *current* list and commit it so the
+        # next push is diffed against the new baseline.
+        # -----------------------------------------------------------------------
+        - name: Refresh ami‑ledger.txt
+          shell: bash
+          run: |
+            {
+              echo '# AUTO‑GENERATED — do not edit by hand'
+              echo '# Format: <key>|<ami_id>'
+              cat current.list
+            } > ami-ledger.txt
+
+        - name: Commit new ledger
+          env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            git config user.name  "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git add ami-ledger.txt
+            git commit -m "ci: update AMI ledger" || {
+              echo "No ledger change to commit."
+              exit 0
+            }
+            git push

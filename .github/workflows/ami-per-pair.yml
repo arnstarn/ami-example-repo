@@ -1,0 +1,42 @@
+# .github/workflows/ami-per-pair.yml
+# ───────────────────────────────────────────────────────────────────────────────
+# Listens for the repository_dispatch event sent by ami‑detector.yml.
+# Each dispatch payload contains exactly one JSON object:
+#   { "action": "added" | "removed", "key": "<os_key>", "ami": "<ami_id>" }
+#
+# The workflow runs ONE JOB PER DISPATCH, so every changed pair has an
+# independent run with its own logs and status.
+# ------------------------------------------------------------------------------
+
+  name: AMI per‑pair pipeline
+
+  on:
+    repository_dispatch:
+      types: [ ami-pair-changed ]
+
+  jobs:
+    do‑the‑thing:
+      runs-on: ubuntu-latest
+
+      # Concurrency guarantees only one job per key on the same branch
+      concurrency:
+        group: ami-${{ github.event.client_payload.key }}-${{ github.ref_name }}
+        cancel-in-progress: true
+
+      steps:
+        - name: Show payload (for demo)
+          run: |
+            echo "Action : ${{ github.event.client_payload.action }}"
+            echo "Key    : ${{ github.event.client_payload.key }}"
+            echo "AMI ID : ${{ github.event.client_payload.ami }}"
+
+        # ---------------------------------------------------------------------
+        # YOUR REAL LOGIC GOES HERE
+        # Replace the echo below with a build, deploy, etc.
+        # ---------------------------------------------------------------------
+        - name: ✨ Run pipeline for this key/AMI pair
+          run: |
+            ./scripts/deploy-ami.sh \
+              --action "${{ github.event.client_payload.action }}" \
+              --key    "${{ github.event.client_payload.key }}" \
+              --ami    "${{ github.event.client_payload.ami }}"
