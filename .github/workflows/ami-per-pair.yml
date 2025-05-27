@@ -15,7 +15,7 @@
       types: [ ami-pair-changed ]
 
   jobs:
-    do‑the‑thing:
+    do-the-thing:
       runs-on: ubuntu-latest
 
       # Concurrency guarantees only one job per key on the same branch
