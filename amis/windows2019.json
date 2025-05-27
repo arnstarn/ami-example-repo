@@ -1,1 +1,4 @@
-{ "windows2019_2025_04_30": "ami-0cafebabe" }
+{
+  "windows2019_2025_04_30": "ami-0cafebabe",
+  "windows2019_2025_05_15": "ami-0badc0de"
+}
