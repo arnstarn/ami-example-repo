@@ -115,8 +115,26 @@
             # GitHub removes it after the job, so this is safe for CI runners.
             sudo apt-get -y install gh >/dev/null
 
-            while read -r pair;   do [[ -n "$pair" ]] && dispatch added   "$pair"; done <added.list
-            while read -r pair;   do [[ -n "$pair" ]] && dispatch removed "$pair"; done <removed.list
+            fail=0
+            while read -r pair; do
+              if [[ -n "$pair" ]]; then
+                if ! dispatch added "$pair"; then
+                  echo "Dispatch failed for: $pair"
+                  fail=1
+                fi
+              fi
+            done <added.list
+
+            while read -r pair; do
+              if [[ -n "$pair" ]]; then
+                if ! dispatch removed "$pair"; then
+                  echo "Dispatch failed for: $pair"
+                  fail=1
+                fi
+              fi
+            done <removed.list
+
+            exit $fail
 
         # -----------------------------------------------------------------------
         # Update ami‑ledger.txt to match the *current* list and commit it so the
