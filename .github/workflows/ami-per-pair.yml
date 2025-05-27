@@ -30,6 +30,9 @@
             echo "Key    : ${{ github.event.client_payload.key }}"
             echo "AMI ID : ${{ github.event.client_payload.ami }}"
 
+        - name: Check out repository
+          uses: actions/checkout@v4
+
         # ---------------------------------------------------------------------
         # YOUR REAL LOGIC GOES HERE
         # Replace the echo below with a build, deploy, etc.
