@@ -3,3 +3,4 @@
 al2023_2025_05_27|ami-0deadbeef
 ubuntu2204_2025_05_10|ami-0123456789abcde0
 windows2019_2025_04_30|ami-0cafebabe
+windows2019_2025_05_15|ami-0badc0de
