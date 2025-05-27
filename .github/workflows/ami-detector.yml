@@ -87,8 +87,9 @@
         # independently for every change.
         # -----------------------------------------------------------------------
         - name: Dispatch per‑pair workflow runs
+          # always true, but keeps `matrix` linter happy
           if: |
-            steps.diff.outputs != ''  # always true, but keeps `matrix` linter happy
+            steps.diff.outputs != ''
           shell: bash
           env:
             GH_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
