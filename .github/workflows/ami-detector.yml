@@ -107,7 +107,7 @@
 
               gh api repos/${{ github.repository }}/dispatches \
                 --field event_type="ami-pair-changed" \
-                --field client_payload="$(jq -n --arg a "$action" \
+                --raw-field client_payload="$(jq -n --arg a "$action" \
                                              --arg k "$key" --arg m "$ami" \
                                              '{action:$a, key:$k, ami:$m}')" \
                 >/dev/null
